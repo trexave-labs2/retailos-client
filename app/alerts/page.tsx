@@ -21,8 +21,19 @@ export default function AlertsPage() {
 
   useEffect(() => {
     async function load() {
+      if (!storeId) {
+        setError("No store is associated with this account");
+        return;
+      }
+
       try {
-        if (!storeId) throw new Error("No store is associated with this account");
+        await api("/alerts/generate-low-stock?store_id=" + storeId, { method: "POST" });
+        setError("");
+      } catch {
+        setError("Could not check for new low-stock alerts. Showing saved alerts.");
+      }
+
+      try {
         const data = await api<{ alerts: Alert[] }>("/alerts?store_id=" + storeId);
         setAlerts(data.alerts);
       } catch (e) {
@@ -31,18 +42,6 @@ export default function AlertsPage() {
     }
     void load();
   }, [storeId]);
-
-  async function generate() {
-    if (!storeId) return;
-    try {
-      await api("/alerts/generate-low-stock?store_id=" + storeId, { method: "POST" });
-      setMessage("Low-stock alerts generated.");
-      const data = await api<{ alerts: Alert[] }>("/alerts?store_id=" + storeId);
-      setAlerts(data.alerts);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to generate alerts");
-    }
-  }
 
   async function resolve(id: number) {
     if (!storeId) return;
@@ -71,8 +70,7 @@ export default function AlertsPage() {
   return (
     <DashboardShell role={role} user={currentUser!} title="Alerts">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <p className="text-sm text-white/40">Open alerts from the server.</p>
-        <button onClick={generate} data-tour="alerts-generate" className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-black">Generate low-stock alerts</button>
+        <p className="text-sm text-white/40">Low-stock alerts are checked automatically when this page opens.</p>
       </div>
       {message && <p role="status" className="mt-4 rounded-xl bg-green-500/10 p-3 text-sm text-green-300">{message}</p>}
       {error && <p role="alert" className="mt-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
@@ -89,7 +87,7 @@ export default function AlertsPage() {
             </div>
           </article>
         ))}
-        {!alerts.length && <div className="rounded-2xl border border-white/10 bg-[#151515] p-10 text-center text-white/70">No open alerts. Set a low-stock threshold on your products, then press “Generate low-stock alerts”.</div>}
+        {!alerts.length && <div className="rounded-2xl border border-white/10 bg-[#151515] p-10 text-center text-white/70">No open alerts. RetailOS checks for low-stock alerts when this page opens.</div>}
       </div>
     </DashboardShell>
   );

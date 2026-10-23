@@ -255,7 +255,7 @@ export default function DebtsPage() {
         <p className="mt-2 text-2xl font-semibold text-orange-400">{money(totalOutstanding)}</p>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-[#151515] p-5">
+      <section data-tour="debts-sales-table" className="rounded-2xl border border-white/10 bg-[#151515] p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold">Outstanding sales</h2>
@@ -267,7 +267,7 @@ export default function DebtsPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="min-w-[680px] w-full text-left text-sm">
             <thead className="text-xs text-white/40">
               <tr>{["CUSTOMER", "SALE", "SALE DATE", "ORIGINAL TOTAL", "PAID", "REMAINING", "ACTION"].map((heading) =>
                 <th key={heading} className="px-3 py-3">{heading}</th>,
@@ -329,6 +329,7 @@ export default function DebtsPage() {
               <input
                 aria-label="Amount received"
                 type="number"
+                inputMode="decimal"
                 min="0.01"
                 max={paymentHistory?.balance ?? selectedSale.balance}
                 step="0.01"

@@ -12,6 +12,8 @@ test("theme preference is persisted and applied to the document root", () => {
   assert.match(provider, /localStorage\.getItem/);
   assert.match(provider, /localStorage\.setItem/);
   assert.match(provider, /document\.documentElement\.dataset\.theme = theme/);
+  assert.match(provider, /useEffect\(\(\) => \{/);
+  assert.match(provider, /document\.documentElement\.style\.colorScheme = theme/);
   assert.match(layout, /savedTheme === "light" \|\| savedTheme === "dark"/);
 });
 
@@ -32,8 +34,8 @@ test("light palette covers core surfaces, controls, states, and active navigatio
     'html[data-theme="light"]',
     "--app-bg: #f6f5f2",
     "--accent: #c2410c",
-    "[class*=\"bg-[#0b0b0b]\"]",
-    "[class*=\"text-white/\"]",
+    '[class*="bg-[#0b0b0b]"]',
+    '[class*="text-white/"]',
     "select option",
     "[role=\"dialog\"]",
     "nav a[aria-current=\"page\"]",
@@ -42,4 +44,7 @@ test("light palette covers core surfaces, controls, states, and active navigatio
   ]) {
     assert.ok(css.includes(expected), `Missing theme contract: ${expected}`);
   }
+
+  assert.ok(css.includes('html[data-theme="light"] [class*="bg-black/"]'));
+  assert.ok(css.includes('html[data-theme="light"] [class*="hover:bg-white/"]'));
 });

@@ -59,7 +59,7 @@ function WelcomeCard() {
         </h2>
         <div id="welcome-body" className="mt-3 space-y-3 text-sm text-white/80">
           <p>Add your products, record sales, keep track of stock and see who owes you.</p>
-          <p>Take a quick tour (about a minute) and we&apos;ll point out the parts you&apos;ll use every day. Nothing you do in the tour changes your data unless you press the buttons yourself.</p>
+          <p>Take a quick tour (about a minute) and we&apos;ll point out the parts you&apos;ll use every day. The tour never clicks controls or submits forms for you. If you choose to use a real store action while following a step, that action may change your data.</p>
         </div>
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button type="button" onClick={dismissWelcome} className="rounded-xl bg-white/10 px-4 py-3 text-sm">

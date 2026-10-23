@@ -132,7 +132,7 @@ export default function SettingsPage() {
 
   return (
     <DashboardShell title="Settings">
-      <section className="rounded-2xl border border-white/10 bg-[#151515] p-5">
+      <section data-tour="settings-account" className="rounded-2xl border border-white/10 bg-[#151515] p-5">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-semibold">Account</h2>
@@ -159,7 +159,7 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
+      <section data-tour="settings-store" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <h2 className="font-semibold">Store profile</h2>
         <p className="mt-2 text-sm text-white/50">Update the name shown throughout RetailOS. Only the store owner can make this change.</p>
         <dl className="mt-4 space-y-2 text-sm">
@@ -205,7 +205,7 @@ export default function SettingsPage() {
         </form>
       </section>
 
-      <section className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
+      <section data-tour="settings-password" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <h2 className="font-semibold">Change password</h2>
         <p className="mt-2 text-sm text-white/50">Choose a new password for this account. After a successful change, all sessions are invalidated and you must sign in again.</p>
         <form onSubmit={handlePasswordChange} className="mt-5 max-w-xl space-y-4">
@@ -265,25 +265,7 @@ export default function SettingsPage() {
         </form>
       </section>
 
-      <section className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
-        <h2 className="font-semibold">PIN access</h2>
-        <p className="mt-2 text-sm text-white/50">PIN setup is not available yet. A future PIN feature will be separate from your account password.</p>
-        <button type="button" disabled className="mt-4 rounded-lg border border-white/10 px-4 py-2.5 text-sm text-white/40 disabled:cursor-not-allowed disabled:opacity-50">
-          PIN setup unavailable
-        </button>
-      </section>
 
-      <div className="mt-5 space-y-4">
-        {[
-          ["Notifications", "Notification preferences are not available in the current API."],
-          ["Devices", "Managing logged-in devices is not available in the current API."],
-        ].map(([title, description]) => (
-          <section key={title} className="rounded-2xl border border-white/10 bg-[#151515] p-5">
-            <h2 className="font-semibold">{title}</h2>
-            <p className="mt-2 text-sm text-white/60">{description}</p>
-          </section>
-        ))}
-      </div>
     </DashboardShell>
   );
 }

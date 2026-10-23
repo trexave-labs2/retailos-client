@@ -12,6 +12,7 @@ export const metadata: Metadata = {
   title: "TX RetailOS | Retail and Stock Management",
   description,
   applicationName: siteName,
+  icons: ["/favicon.ico", "/icon.png", "/apple-icon.png"],
   alternates: {
     canonical: "/",
   },

@@ -18,6 +18,7 @@ export default function LiveDashboard() {
   const [brief, setBrief] = useState<DailyBrief | null>(null);
   const [briefError, setBriefError] = useState<string | null>(null);
   const [sales, setSales] = useState<SaleSummary[]>([]);
+  const [salesError, setSalesError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -57,7 +58,15 @@ export default function LiveDashboard() {
             ? briefResult.reason.message
             : "Unable to load the daily business brief.");
         }
-        setSales(salesResult.status === "fulfilled" ? (salesResult.value.sales ?? []) : []);
+        if (salesResult.status === "fulfilled") {
+          setSales(salesResult.value.sales ?? []);
+          setSalesError(null);
+        } else {
+          // A failed sales request is not evidence that the store has no sales.
+          setSalesError(salesResult.reason instanceof Error
+            ? salesResult.reason.message
+            : "Unable to load recent sales.");
+        }
         setError(null);
       } catch (err: unknown) {
         if (cancelled) return;
@@ -172,7 +181,7 @@ export default function LiveDashboard() {
       ) : !stats ? (
         <p className="text-sm text-white/60">Dashboard data is unavailable.</p>
       ) : (
-        <DashboardContent user={user?.username} stats={stats} brief={brief} briefError={briefError} onRetryBrief={() => setRetryCount((count) => count + 1)} sales={sales} rankings={rankings} rankingsLoading={rankingsLoading} rankingsError={rankingsError} periodStart={periodStart} periodEnd={periodEnd} onPeriodStartChange={setPeriodStart} onPeriodEndChange={setPeriodEnd} onRetryRankings={() => setRankingsRetryCount((count) => count + 1)} />
+        <DashboardContent user={user?.username} stats={stats} brief={brief} briefError={briefError} onRetryBrief={() => setRetryCount((count) => count + 1)} sales={sales} salesError={salesError} onRetrySales={() => { setLoading(true); setRetryCount((count) => count + 1); }} rankings={rankings} rankingsLoading={rankingsLoading} rankingsError={rankingsError} periodStart={periodStart} periodEnd={periodEnd} onPeriodStartChange={setPeriodStart} onPeriodEndChange={setPeriodEnd} onRetryRankings={() => setRankingsRetryCount((count) => count + 1)} />
       )}
     </DashboardShell>
   );
@@ -185,6 +194,8 @@ function DashboardContent({
   briefError,
   onRetryBrief,
   sales,
+  salesError,
+  onRetrySales,
   rankings,
   rankingsLoading,
   rankingsError,
@@ -200,6 +211,8 @@ function DashboardContent({
   briefError: string | null;
   onRetryBrief: () => void;
   sales: SaleSummary[];
+  salesError: string | null;
+  onRetrySales: () => void;
   rankings: DashboardRankings | null;
   rankingsLoading: boolean;
   rankingsError: string | null;
@@ -209,6 +222,10 @@ function DashboardContent({
   onPeriodEndChange: (value: string) => void;
   onRetryRankings: () => void;
 }) {
+  const firstDay = !salesError && sales.length === 0 && stats.products_count === 0 && Number(stats.today_sales_count) === 0 && Number(stats.today_sales_total) === 0;
+  const salesMetricValue = firstDay ? "No sales yet" : stats.today_sales_count;
+  const salesTotalMetricValue = firstDay ? "No sales yet" : "₦" + Number(stats.today_sales_total).toLocaleString("en-NG");
+
   const restockRecommendations = (brief?.insights?.restock_recommendations ?? []).filter((item) =>
     Number.isSafeInteger(item.product_id) &&
     item.product_id > 0 &&
@@ -226,6 +243,17 @@ function DashboardContent({
     <>
       <header><h2 className="text-lg font-semibold">Welcome{user ? `, ${user}` : ""}.</h2></header>
 
+      {firstDay ? (
+        <section aria-labelledby="dashboard-first-day" role="status" className="mt-5 rounded-2xl border border-orange-400/20 bg-orange-400/[0.06] p-5">
+          <h2 id="dashboard-first-day" className="font-semibold">Your store is ready for its first records</h2>
+          <p className="mt-2 text-sm leading-6 text-white/70">No products or sales have been recorded yet. The figures below reflect saved records, not estimates or loading placeholders. Add a product first, then record your first sale.</p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link href="/inventory" className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-black">Add a product</Link>
+            <Link href="/sales" className="rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold text-white">Record a sale</Link>
+          </div>
+        </section>
+      ) : null}
+
       <section aria-labelledby="dashboard-summary" data-tour="dashboard-summary" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <h2 id="dashboard-summary" className="font-semibold">Business summary</h2>
         <p className="mt-1 text-xs text-white/45">Daily sales reporting date (Africa/Lagos): {brief?.date ? formatNigeriaDate(brief.date + "T12:00:00+01:00") : "Date not provided by the server"}</p>
@@ -233,8 +261,8 @@ function DashboardContent({
           <DashboardMetric label="Products" value={stats.products_count} href="/inventory" />
           <DashboardMetric label="Low-stock products" value={stats.low_stock_count} href="/inventory" />
           <DashboardMetric label="Open alerts" value={stats.open_alerts_count} href="/alerts" />
-          <DashboardMetric label="Sales in reporting period" value={stats.today_sales_count} />
-          <DashboardMetric label="Sales total in reporting period" value={"₦" + Number(stats.today_sales_total).toLocaleString("en-NG")} />
+          <DashboardMetric label="Sales in reporting period" value={salesMetricValue} />
+          <DashboardMetric label="Sales total in reporting period" value={salesTotalMetricValue} />
         </div>
       </section>
 
@@ -350,10 +378,16 @@ function DashboardContent({
         onRetry={onRetryRankings}
       />
 
-      <section aria-labelledby="recent-sales" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
+      <section aria-labelledby="recent-sales" data-tour="dashboard-recent-sales" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <h2 id="recent-sales" className="font-semibold">Recent sales</h2>
         <p className="mt-1 text-xs text-white/45">Timestamps are displayed in Africa/Lagos time (WAT, UTC+01:00).</p>
-        {sales.length > 0 ? (
+        {salesError ? (
+          <div role="alert" className="mt-3 rounded-xl border border-red-500/20 bg-red-500/5 p-4">
+            <p className="text-sm text-red-200">Recent sales could not be loaded, so an empty list cannot be confirmed.</p>
+            <p className="mt-1 break-words text-xs text-red-200/70">{salesError}</p>
+            <button type="button" onClick={onRetrySales} className="mt-3 rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-black">Retry sales</button>
+          </div>
+        ) : sales.length > 0 ? (
           <div className="mt-3 overflow-x-auto"><table className="w-full text-left text-sm">
             <thead className="text-xs text-white/40"><tr><th className="px-3 py-2">DATE &amp; TIME (WAT)</th><th className="px-3 py-2">SALE</th><th className="px-3 py-2">TOTAL</th></tr></thead>
             <tbody>{sales.slice(0, 10).map((sale) => <tr key={sale.id} className="border-t border-white/5"><td className="px-3 py-3">{formatNigeriaDateTime(sale.created_at)}</td><td className="px-3 py-3">#{sale.id}</td><td className="px-3 py-3">₦{Number(sale.total_amount).toLocaleString("en-NG")}</td></tr>)}</tbody>
@@ -421,7 +455,7 @@ function DashboardRankingsSection({
     : "Selected date range";
 
   return (
-    <section aria-labelledby="dashboard-rankings" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
+    <section aria-labelledby="dashboard-rankings" data-tour="dashboard-rankings" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 id="dashboard-rankings" className="font-semibold">Product and service rankings</h2>

@@ -879,7 +879,7 @@ export default function SalesPage() {
                         </div>
                         {sale.status === "conflict" && sale.catalog && (
                           <label className="text-xs text-white/60">Quantity
-                            <input type="number" min="1" step="1" value={item.quantity} onChange={(event) => updatePendingQuantity(sale.id, item.product_id, item.unit_id, Number(event.target.value))} className="field ml-2 w-20" />
+                            <input type="number" inputMode="numeric" min="1" step="1" value={item.quantity} onChange={(event) => updatePendingQuantity(sale.id, item.product_id, item.unit_id, Number(event.target.value))} className="field ml-2 w-20" />
                           </label>
                         )}
                       </div>
@@ -896,7 +896,7 @@ export default function SalesPage() {
                 {sale.status === "conflict" && sale.catalog && (
                   <label className="mt-3 block max-w-xs text-xs text-white/60">
                     Amount paid
-                    <input type="number" min="0" step="0.01" value={sale.payload.amount_paid} onChange={(event) => updatePendingAmountPaid(sale.id, Number(event.target.value))} className="field mt-1 w-full" />
+                    <input type="number" inputMode="decimal" min="0" step="0.01" value={sale.payload.amount_paid} onChange={(event) => updatePendingAmountPaid(sale.id, Number(event.target.value))} className="field mt-1 w-full" />
                   </label>
                 )}
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -918,7 +918,7 @@ export default function SalesPage() {
 
       {!accountReady && <p role={storageReadFailed ? "alert" : "status"} className="mb-5 text-sm text-white/50">{storageReadFailed ? "Checkout is disabled because saved browser data could not be read. Do not clear browser storage; recover the saved data before continuing." : "Restoring checkout data for the signed-in account…"}</p>}
 
-      {accountReady && <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
+      {accountReady && <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
         <section className="rounded-2xl border border-white/10 bg-[#151515] p-5">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="font-semibold">Products and services</h2>
@@ -987,7 +987,7 @@ export default function SalesPage() {
           )}
         </section>
 
-        <aside data-tour="sales-cart" className="h-fit rounded-2xl border border-white/10 bg-[#151515] p-5 lg:sticky lg:top-20">
+        <aside data-tour="sales-cart" className="min-w-0 h-fit rounded-2xl border border-white/10 bg-[#151515] p-5 lg:sticky lg:top-20">
           <h2 className="text-lg font-semibold">Checkout</h2>
 
           <div className="mt-5 space-y-3">
@@ -1057,6 +1057,7 @@ export default function SalesPage() {
                       aria-label={`Quantity of ${item.product.name}`}
                       className="field w-20"
                       type="number"
+                      inputMode="numeric"
                       min="1"
                       step="1"
                       value={item.quantity}
@@ -1084,8 +1085,10 @@ export default function SalesPage() {
                   <label className="mt-3 block text-xs text-white/50">
                     Unit price
                     <input
+                      aria-label={`Unit price for ${item.product.name}`}
                       className="field mt-1 w-full"
                       type="number"
+                      inputMode="decimal"
                       min="0"
                       step="0.01"
                       value={item.price}
@@ -1127,6 +1130,7 @@ export default function SalesPage() {
             <input
               className="field mt-2 w-full"
               type="number"
+              inputMode="decimal"
               min="0"
               max={total}
               step="0.01"

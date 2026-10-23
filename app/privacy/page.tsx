@@ -2,104 +2,92 @@
 
 import Link from "next/link";
 
+const sections = [
+  {
+    title: "What information RetailOS uses",
+    body: [
+      "RetailOS uses information needed to run your store account. This can include your name or username, email address, store details, products and stock levels, sales and payment records, refunds, customer names and contact details, and low-stock alerts.",
+      "If you send feedback, we also receive the message and category you choose. Your name and email address are optional on the feedback form.",
+    ],
+  },
+  {
+    title: "How we use it",
+    body: [
+      "We use this information to sign you in, manage your store's products and stock, record sales and payments, keep customer purchase history, show alerts, and prepare dashboard summaries and audit history.",
+      "RetailOS checks that a signed-in account is allowed to access the requested store's protected records. Information you enter for one store should not be treated as information for another store.",
+    ],
+  },
+  {
+    title: "Sign-in and cookies",
+    body: [
+      "RetailOS uses a sign-in session. After you log in, your browser keeps a session cookie so the server can recognize your signed-in session. The production setup is designed to use an HttpOnly cookie over HTTPS.",
+      "The app also saves progress through the optional welcome tour in your browser's local storage. That progress contains tour chapter and step information, is kept separately for each account in that browser, and is not synced to your other devices.",
+      "Logging out ends your session. Do not share your account or leave a signed-in session open on a shared computer.",
+    ],
+  },
+  {
+    title: "Where records are stored",
+    body: [
+      "RetailOS's server stores store and business records in its database. These records support features such as inventory, sales, payments, refunds, customer history, alerts, and audit history.",
+      "The server documentation does not specify a fixed retention period for every record. It also does not document a self-service tool to export or delete an entire account. If you have a request about your information, contact support so it can be reviewed.",
+    ],
+  },
+  {
+    title: "Feedback and email delivery",
+    body: [
+      "When you submit feedback, RetailOS records the message, its category, the submission status, and any optional contact details you provide. The server sends accepted feedback through the email service configured for the application.",
+      "Do not include passwords, payment card details, or other sensitive information in feedback messages.",
+    ],
+  },
+  {
+    title: "What we do not claim",
+    body: [
+      "This page describes behavior documented in the current RetailOS server and client work. It does not promise a particular retention period, legal compliance certification, or that every possible third-party service is absent. We will update this page when those details are verified.",
+    ],
+  },
+];
+
 export default function PrivacyPolicy() {
   return (
     <main className="min-h-screen bg-[#0b0b0b] text-white">
-      <div className="mx-auto max-w-2xl px-6 py-20">
-        <h1 className="mb-8 text-3xl font-semibold tracking-tight border-b border-white/10 pb-6">
-          Privacy Policy
-        </h1>
+      <div className="mx-auto max-w-3xl px-6 py-16 sm:py-20">
+        <Link href="/" className="text-sm text-orange-300 underline underline-offset-4">
+          Back to RetailOS
+        </Link>
+        <header className="mt-8 border-b border-white/10 pb-6">
+          <h1 className="text-3xl font-semibold tracking-tight">Privacy Policy</h1>
+          <p className="mt-4 max-w-2xl leading-relaxed text-white/65">
+            This page explains in plain language what information TX RetailOS uses
+            and why. It is based on the features documented in the current app
+            and server. We will not make promises that the system has not verified.
+          </p>
+        </header>
 
-        <section className="mb-8">
-          <h2 className="text-2xl font-medium mb-4">Information We Collect</h2>
-          <p className="text-white/60 leading-relaxed">
-            When you use TX RetailOS, we collect information necessary to operate the
-            retail management platform and provide your account functionality. This includes
-            your account credentials (name, email) collected during registration, and
-            transaction/inventory data (products, sales, stock levels, customer information)
-            stored to power the core retail workflow.
-          </p>
-        </section>
+        <div className="mt-8 space-y-8">
+          {sections.map((section) => (
+            <section key={section.title}>
+              <h2 className="text-xl font-medium">{section.title}</h2>
+              <div className="mt-3 space-y-3 text-sm leading-7 text-white/65 sm:text-base">
+                {section.body.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+              </div>
+            </section>
+          ))}
 
-        <section className="mb-8">
-          <h2 className="text-2xl font-medium mb-4">Authentication and Sessions</h2>
-          <p className="text-white/60 leading-relaxed">
-            TX RetailOS uses a session-based authentication system. When you log in, a
-            same-origin session cookie is set by the Next.js server proxy, associating your
-            browser with your account on the Flask backend. The /auth/me endpoint verifies
-            your session on protected pages, while /auth/login and /auth/logout handle
-            credential verification and session termination. Public pages (home, demo,
-            login, register) render without requiring an active session, and sessions are
-            refreshed automatically during navigation.
-          </p>
-        </section>
-
-        <section className="mb-8">
-          <h2 className="text-2xl font-medium mb-4">Analytics and Third-Party Services</h2>
-          <p className="text-white/60 leading-relaxed">
-            TX RetailOS does not use Google Analytics, Facebook Pixel, or any other third-party
-            analytics or tracking services. The only data transmission occurs via same-origin
-            API calls necessary for core functionality (authentication, inventory, sales, and
-            reports). No visitor behavior is monitored, logged, or shared with external
-            services.
-          </p>
-        </section>
-
-        <section className="mb-8">
-          <h2 className="text-2xl font-medium mb-4">Data Retention and User Rights</h2>
-          <p className="text-white/60 leading-relaxed">
-            Data retention periods are determined by the backend system (Flask API) and your
-            account activity. Transaction history, sales records, inventory counts, and customer
-            records are retained for as long as your account remains active and as needed to
-            provide the retail management functionality. If you wish to request access to your
-            personal data or request deletion, please contact us using the information below.
-          </p>
-        </section>
-
-        <section className="mb-8">
-          <h2 className="text-2xl font-medium mb-4">Contact Us</h2>
-          <p className="text-white/60 leading-relaxed">
-            If you have questions or concerns about this Privacy Policy or how your personal
-            information is handled, contact us at: <a href="mailto:support.trexave@gmail.com"
-              className="text-orange-400 hover:text-orange-300 underline">
-              support.trexave@gmail.com</a>.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-medium mb-4">Cookies and Local Storage</h2>
-          <p className="text-white/60 leading-relaxed">
-            TX RetailOS uses browser storage for functional purposes only:
-          </p>
-          <ul className="list-disc pl-5 text-white/60 space-y-2">
-            <li>
-              <strong>Tour persistence:</strong> Progress through the in-app welcome tour is
-              stored in localStorage under the key retailos:tour:v1:user-id. This holds
-              only chapter IDs and step numbers, is per account per browser, and is not synced
-              across devices. No personal identifiable information is stored in tour data.
-            </li>
-            <li>
-              <strong>Pending sale idempotency:</strong> A pending sale ID may be stored in
-              localStorage under retailos-pending-sale-id to support idempotent retry of
-              cash-first checkout operations. This is temporary and cleared upon successful
-              completion or logout.
-            </li>
-          </ul>
-          <p className="text-white/60 leading-relaxed mt-4">
-            The app does not use marketing cookies, tracking pixels, or embedded third-party
-            scripts. All storage is strictly functional and related to the operation of the
-            retail management platform.
-          </p>
-        </section>
-
-        <section className="mt-8 pt-8 border-t border-white/10">
-          <p className="text-xs text-white/40">
-            This Privacy Policy was last updated on {new Date().toLocaleDateString()}.
-            Changes will be posted on this page and your continued use of TX RetailOS after
-            such changes constitutes acceptance. We do not claim GDPR compliance merely
-            because this page exists.
-          </p>
-        </section>
+          <section>
+            <h2 className="text-xl font-medium">Questions or privacy requests</h2>
+            <p className="mt-3 text-sm leading-7 text-white/65 sm:text-base">
+              Contact us at{" "}
+              <a
+                href="mailto:support.trexave@gmail.com"
+                className="text-orange-300 underline underline-offset-4 hover:text-orange-200"
+              >
+                support.trexave@gmail.com
+              </a>
+              {" "}if you have a question about this page or want to ask about information
+              associated with your account.
+            </p>
+          </section>
+        </div>
       </div>
     </main>
   );

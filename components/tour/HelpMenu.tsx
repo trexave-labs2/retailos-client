@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 
+import Link from "next/link";
 import { useTour } from "@/components/tour/TourProvider";
 import { chapterForPath, getChapter } from "@/lib/tour-core.mjs";
 
@@ -108,6 +109,8 @@ export function HelpMenu() {
               );
             })}
           </ul>
+          <p className="px-2 pt-3 text-xs leading-5 text-white/65">Tours guide you through the interface. They never submit forms or perform actions for you.</p>
+          <Link href="/#faq" onClick={() => setOpen(false)} className="mt-1 block rounded-xl px-3 py-2 text-left text-xs font-medium text-orange-300 hover:bg-white/10">Read FAQs and support options</Link>
           <button
             type="button"
             onClick={() => {

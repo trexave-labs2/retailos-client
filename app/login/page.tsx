@@ -5,6 +5,7 @@ import { FormEvent, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { ThemeToggle } from "@/components/theme/ThemeProvider";
+import BrandMark from "@/components/brand/BrandMark";
 
 function subscribeToLocation(callback: () => void) {
   window.addEventListener("popstate", callback);
@@ -43,7 +44,10 @@ export default function LoginPage() {
     <main className="relative flex min-h-screen items-center justify-center bg-[#0b0b0b] px-4 text-white">
       <div className="absolute right-4 top-4"><ThemeToggle compact /></div>
       <section className="w-full max-w-md rounded-2xl border border-white/10 bg-[#151515] p-8 shadow-2xl">
-        <p className="mb-8 text-lg font-bold tracking-tight">TX <span className="text-orange-500">RetailOS</span></p>
+        <div className="mb-8 flex items-center gap-3">
+          <BrandMark size={48} />
+          <p className="text-xl font-bold tracking-tight">TX <span className="text-orange-500">RetailOS</span></p>
+        </div>
         <div className="mb-7">
           <h1 className="text-3xl font-semibold">Sign in</h1>
           <p className="mt-2 text-sm text-white/55">Use the account stored by the RetailOS server.</p>

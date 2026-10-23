@@ -191,6 +191,7 @@ const ROUTE_SOURCES = {
   "/transactions": ["app/transactions/page.tsx"],
   "/debts": ["app/debts/page.tsx"],
   "/alerts": ["app/alerts/page.tsx"],
+  "/settings": ["app/settings/page.tsx"],
 };
 const SHARED_SOURCES = ["components/layout/DashboardShell.tsx", "components/tour/HelpMenu.tsx"];
 
@@ -233,7 +234,7 @@ test("steps have plain-language copy and chapters are non-empty with unique ids"
 test("every chapter can be reached from its page via 'Tour this page'", () => {
   for (const chapter of CHAPTERS) assert.equal(chapterForPath(chapter.route)?.id, chapter.id);
   assert.equal(chapterForPath("/debts")?.id, "money");
-  assert.equal(chapterForPath("/settings"), null);
+  assert.equal(chapterForPath("/settings")?.id, "settings");
 });
 
 test("tour never claims features the app does not have", () => {

@@ -411,9 +411,6 @@ export default function PlansPage() {
                   </tbody>
                 </table>
               </div>
-              <p className="mt-4 text-xs leading-5 text-white/45">
-                Plan metadata is not proof that every listed entitlement is enforced on every server route. Review the server&apos;s subscription launch-readiness notes before marketing Pro-only capabilities.
-              </p>
             </section>
           </>
         )}

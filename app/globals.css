@@ -27,6 +27,19 @@ textarea {
   font: inherit;
 }
 
+/* Comfortable touch targets for shop-floor use on phones and tablets. */
+button,
+[role="button"] {
+  min-height: 44px;
+}
+
+.field,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+select,
+textarea {
+  min-height: 44px;
+}
+
 button:not(:disabled),
 a {
   cursor: pointer;
@@ -185,6 +198,30 @@ html[data-theme="light"] textarea:focus-visible {
 }
 html[data-theme="light"] select option { background: #ffffff; color: #25231f; }
 
+/* Light mode must also translate semi-transparent black utilities used by menus, inputs, and overlays. */
+html[data-theme="light"] [class*="bg-black/"] {
+  background-color: var(--surface-subtle) !important;
+}
+html[data-theme="light"] [class*="bg-black/60"] {
+  background-color: rgb(20 20 20 / 0.45) !important;
+}
+html[data-theme="light"] [class*="bg-[#090909]"],
+html[data-theme="light"] [class*="bg-[#080808]"],
+html[data-theme="light"] [class*="bg-[#0a0a0a]"] {
+  background-color: var(--app-bg) !important;
+}
+html[data-theme="light"] [class*="bg-[#252525]"],
+html[data-theme="light"] [class*="bg-[#2a2a2a]"],
+html[data-theme="light"] [class*="bg-[#303030]"] {
+  background-color: var(--surface-raised) !important;
+}
+html[data-theme="light"] [class*="hover:bg-white/"]:hover {
+  background-color: var(--surface-subtle) !important;
+}
+html[data-theme="light"] [class*="hover:text-white"]:hover {
+  color: var(--app-text) !important;
+}
+
 /* Keep common status messaging legible without removing its semantic color. */
 html[data-theme="light"] [class*="text-red-300"],
 html[data-theme="light"] [class*="text-red-400"] { color: #b42318 !important; }
@@ -332,5 +369,68 @@ body {
   #main-content {
     padding-left: 0.5rem;
     padding-right: 0.5rem;
+  }
+}
+
+
+/* Use the logo variant with enough contrast for the active theme. */
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.brand-mark-light {
+  display: block;
+}
+.brand-mark-dark {
+  display: none;
+}
+html[data-theme="light"] .brand-mark-light {
+  display: none;
+}
+html[data-theme="light"] .brand-mark-dark {
+  display: block;
+}
+
+/* C9: keep wide operational tables readable on phones without widening the page. */
+#main-content .overflow-x-auto {
+  width: 100%;
+  min-width: 0;
+}
+
+#main-content .overflow-x-auto > table {
+  width: max-content;
+  min-width: 100%;
+}
+
+#main-content [data-tour="sales-cart"] {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  #main-content [data-tour="sales-cart"] {
+    position: static;
+    padding: 1rem;
+  }
+
+  #main-content [data-tour="transactions-table"],
+  #main-content [data-tour="inventory-table"] {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #main-content .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  #main-content .overflow-x-auto > table th,
+  #main-content .overflow-x-auto > table td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  #main-content .overflow-x-auto > table td:has(button) {
+    white-space: nowrap;
   }
 }

@@ -342,9 +342,9 @@ export default function InventoryPage() {
           <option value="Service">Service</option>
         </select></label>
         <label className="block text-xs text-white/75">{isService ? "Service name" : "Product name"}<input required minLength={2} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="field mt-1 text-sm" placeholder={isService ? "e.g. Delivery service" : "e.g. Rice 50kg"} /></label>
-        <label className="block text-xs text-white/75">Price (₦)<input required min="0" step="0.01" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="field mt-1 text-sm" placeholder="0.00" /></label>
+        <label className="block text-xs text-white/75">Price (₦)<input required min="0" step="0.01" type="number" inputMode="decimal" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="field mt-1 text-sm" placeholder="0.00" /></label>
         {!isService && <>
-          <label className="block text-xs text-white/75">{editing ? "Stock quantity" : "Opening stock"}<input required min="0" type="number" step="1" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className="field mt-1 text-sm" placeholder="0" /></label>
+          <label className="block text-xs text-white/75">{editing ? "Stock quantity" : "Opening stock"}<input required min="0" type="number" inputMode="numeric" step="1" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className="field mt-1 text-sm" placeholder="0" /></label>
           <label className="block text-xs text-white/75">Base unit<select required value={usesCustomUnit ? "other" : form.baseUnit} onChange={(e) => {
             const value = e.target.value;
             if (value === "other") {
@@ -359,20 +359,20 @@ export default function InventoryPage() {
             <option value="other">Other</option>
           </select></label>
           {usesCustomUnit && <label className="block text-xs text-white/75">Custom unit<input required minLength={1} maxLength={20} value={customUnit} onChange={(e) => setCustomUnit(e.target.value)} className="field mt-1 text-sm" placeholder="Enter unit name" /></label>}
-          <label className="block text-xs text-white/75">Low-stock threshold (optional)<input min="0" type="number" step="1" value={form.threshold} onChange={(e) => setForm({ ...form, threshold: e.target.value })} className="field mt-1 text-sm" placeholder="Alert me at or below…" /></label>
+          <label className="block text-xs text-white/75">Low-stock threshold (optional)<input min="0" type="number" inputMode="numeric" step="1" value={form.threshold} onChange={(e) => setForm({ ...form, threshold: e.target.value })} className="field mt-1 text-sm" placeholder="Alert me at or below…" /></label>
         </>}
         <div className="flex gap-2 md:col-span-4">
           <button disabled={pendingAction !== null} className="rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50">{pendingAction === "save" ? "Saving..." : editing ? "Save changes" : isService ? "Add service" : "Add product"}</button>
           {editing && <button type="button" disabled={pendingAction !== null} onClick={reset} className="rounded-xl bg-white/10 px-4 py-3 text-sm disabled:opacity-50">Cancel</button>}
         </div>
       </form>
-      <section className="mt-6 rounded-2xl border border-white/10 bg-[#151515] p-5">
+      <section data-tour="inventory-receiving" className="mt-6 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <div className="mb-4"><h2 className="font-semibold">Receive stock</h2><p className="mt-1 text-xs text-white/45">Record incoming stock and its cost. Quantity is entered in the product&apos;s configured base unit.</p></div>
         <form onSubmit={receiveStock} aria-label="Receive stock form" className="grid gap-3 md:grid-cols-3">
           <label className="block text-xs text-white/75">Product<select required value={receivingForm.productId} onChange={(e) => setReceivingForm({ ...receivingForm, productId: e.target.value })} className="field mt-1 text-sm"><option value="">Choose a product</option>{products.filter((product) => product.product_type === "Physical").map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</select></label>
-          <label className="block text-xs text-white/75">Quantity received<input required min="1" step="1" type="number" value={receivingForm.quantity} onChange={(e) => setReceivingForm({ ...receivingForm, quantity: e.target.value })} className="field mt-1 text-sm" placeholder="e.g. 10" /></label>
+          <label className="block text-xs text-white/75">Quantity received<input required min="1" step="1" type="number" inputMode="numeric" value={receivingForm.quantity} onChange={(e) => setReceivingForm({ ...receivingForm, quantity: e.target.value })} className="field mt-1 text-sm" placeholder="e.g. 10" /></label>
           <label className="block text-xs text-white/75">Unit<input readOnly value={receivingProduct?.base_unit ?? ""} className="field mt-1 text-sm" placeholder="Select a product first" aria-label="Receiving unit (product base unit)" /></label>
-          <label className="block text-xs text-white/75">Cost per unit (₦)<input required min="0" step="0.01" type="number" value={receivingForm.unitCost} onChange={(e) => setReceivingForm({ ...receivingForm, unitCost: e.target.value })} className="field mt-1 text-sm" placeholder="e.g. 5000" /></label>
+          <label className="block text-xs text-white/75">Cost per unit (₦)<input required min="0" step="0.01" type="number" inputMode="decimal" value={receivingForm.unitCost} onChange={(e) => setReceivingForm({ ...receivingForm, unitCost: e.target.value })} className="field mt-1 text-sm" placeholder="e.g. 5000" /></label>
           <label className="block text-xs text-white/75">Receiving date<input required type="date" value={receivingForm.receivedAt} onChange={(e) => setReceivingForm({ ...receivingForm, receivedAt: e.target.value })} className="field mt-1 text-sm" /></label>
           <label className="block text-xs text-white/75">Supplier or source (optional)<input maxLength={120} value={receivingForm.source} onChange={(e) => setReceivingForm({ ...receivingForm, source: e.target.value })} className="field mt-1 text-sm" placeholder="e.g. Main distributor" /></label>
           <div className="rounded-xl border border-orange-500/25 bg-orange-500/5 p-3 md:col-span-3"><p className="text-xs text-white/60">Total receiving cost</p><p className="mt-1 text-xl font-semibold text-orange-300">₦{Number.isFinite(receivingTotal) && receivingForm.quantity !== "" && receivingForm.unitCost !== "" ? receivingTotal.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}</p><p className="mt-1 text-xs text-white/40">Quantity × cost per unit. This is separate from the product&apos;s selling price.</p></div>
@@ -425,7 +425,7 @@ export default function InventoryPage() {
           )}
         </div>
         <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <table className="min-w-[880px] w-full text-left text-sm">
           <thead className="text-xs text-white/40"><tr><th className="px-3 py-3">NAME</th><th className="px-3 py-3">TYPE</th><th className="px-3 py-3">BASE UNIT</th><th className="px-3 py-3">SELLING UNITS</th><th className="px-3 py-3">PRICE</th><th className="px-3 py-3">STOCK</th><th className="px-3 py-3">THRESHOLD</th><th className="px-3 py-3">ACTIONS</th></tr></thead>
           <tbody>
             {productsLoading ? (

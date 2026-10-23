@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
-import { formatNigeriaDateTime } from "@/lib/nigeria-time";
-import type { Category, Receipt } from "@/lib/types";
+import { formatNigeriaDate, formatNigeriaDateTime } from "@/lib/nigeria-time";
+import type { Category, Customer, Receipt } from "@/lib/types";
 
 type ExportSaleItem = {
   product_id?: number;
@@ -66,6 +66,8 @@ export default function TransactionsPage() {
   const [endDate, setEndDate] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customersStoreId, setCustomersStoreId] = useState<number | null>(null);
   const [exporting, setExporting] = useState<"pdf" | "csv" | null>(null);
   const exportInProgress = useRef(false);
   const [page, setPage] = useState(1);
@@ -133,6 +135,31 @@ export default function TransactionsPage() {
     return () => { cancelled = true; };
   }, [storeId]);
 
+  useEffect(() => {
+    if (!storeId) return;
+    let cancelled = false;
+    void api<{ customers: Customer[] }>(`/customers?store_id=${storeId}`, { refresh: true })
+      .then((data) => {
+        if (!cancelled) {
+          setCustomers(Array.isArray(data.customers) ? data.customers : []);
+          setCustomersStoreId(storeId);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCustomers([]);
+          setCustomersStoreId(storeId);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [storeId]);
+
+  const customerName = (customerId: number | null) => {
+    if (customerId == null) return "Walk-in";
+    if (customersStoreId !== storeId) return "Loading customer…";
+    return customers.find((customer) => customer.id === customerId)?.name ?? "Customer not found";
+  };
+
   const visibleRows = useMemo(() => {
     const term = query.trim().toLowerCase();
     if (!term) return rows;
@@ -158,8 +185,8 @@ export default function TransactionsPage() {
   const activeFilters = useMemo(() => {
     const filters: { key: string; label: string }[] = [];
     if (query.trim()) filters.push({ key: "search", label: "Search: " + query.trim() });
-    if (startDate) filters.push({ key: "start", label: "From: " + startDate });
-    if (endDate) filters.push({ key: "end", label: "To: " + endDate });
+    if (startDate) filters.push({ key: "start", label: "From: " + formatNigeriaDate(startDate + "T12:00:00+01:00") });
+    if (endDate) filters.push({ key: "end", label: "To: " + formatNigeriaDate(endDate + "T12:00:00+01:00") });
     if (categoryId) {
       filters.push({
         key: "category",
@@ -180,7 +207,7 @@ export default function TransactionsPage() {
   }
 
   async function exportTransactions(format: "pdf" | "csv") {
-    if (!storeId || exportInProgress.current) return;
+    if (!storeId || loading || visibleRows.length === 0 || exportInProgress.current) return;
     exportInProgress.current = true;
     const printWindow = format === "pdf" ? window.open("", "_blank") : null;
     if (format === "pdf" && !printWindow) {
@@ -213,10 +240,10 @@ export default function TransactionsPage() {
       const totalBalance = rowsToExport.reduce((sum, sale) => sum + Number(sale.balance || 0), 0);
       const filename = "retailos-transactions-" + (startDate || "all") + "-to-" + (endDate || "today") + "-" + dateForFilename();
       if (format === "csv") {
-        const lines = [["Sale ID","Transaction ID","Date","Customer ID","Payment Method","Product ID","Product","Category ID","Category","Quantity","Unit","Unit Conversion","Unit Price","Line Total","Transaction Total","Amount Paid","Balance","Refunded Amount","Net Amount"].map(csvCell).join(",")];
+        const lines = [["Sale ID","Transaction ID","Date","Customer","Payment Method","Product ID","Product","Category ID","Category","Quantity","Unit","Unit Conversion","Unit Price","Line Total","Transaction Total","Amount Paid","Balance","Refunded Amount","Net Amount"].map(csvCell).join(",")];
         for (const sale of rowsToExport) {
           for (const item of (sale.items?.length ? sale.items : [null])) {
-            lines.push([sale.id,sale.client_transaction_id,sale.created_at,sale.customer_id,sale.payment_method,item?.product_id,item?.product_name,item?.category_id,item?.category_name,item?.quantity,item?.unit ?? item?.unit_name,item?.unit_conversion,item?.sale_price ?? item?.unit_price ?? item?.price_at_sale,item?.line_total ?? item?.total,sale.total_amount,sale.amount_paid,sale.balance,sale.refunded_amount ?? 0,sale.net_amount ?? sale.total_amount].map(csvCell).join(","));
+            lines.push([sale.id,sale.client_transaction_id,sale.created_at,customerName(sale.customer_id),sale.payment_method,item?.product_id,item?.product_name,item?.category_id,item?.category_name,item?.quantity,item?.unit ?? item?.unit_name,item?.unit_conversion,item?.sale_price ?? item?.unit_price ?? item?.price_at_sale,item?.line_total ?? item?.total,sale.total_amount,sale.amount_paid,sale.balance,sale.refunded_amount ?? 0,sale.net_amount ?? sale.total_amount].map(csvCell).join(","));
           }
         }
         lines.push("");
@@ -231,10 +258,10 @@ export default function TransactionsPage() {
       if (!printWindow) throw new Error("Unable to open PDF export window.");
       const tableRows = rowsToExport.map((sale) => {
         const items = (sale.items ?? []).map((item) => "<li>" + escapeHtml(item.product_name ?? ("Product #" + (item.product_id ?? ""))) + ": " + escapeHtml(item.quantity ?? "") + " " + escapeHtml(item.unit ?? item.unit_name ?? "") + " · " + escapeHtml(money(item.line_total ?? item.total ?? 0)) + "</li>").join("");
-        return "<tr><td>" + escapeHtml(formatNigeriaDateTime(sale.created_at)) + "<br><small>#" + sale.id + "</small></td><td>" + escapeHtml(sale.payment_method) + "</td><td>" + (items ? "<ul>" + items + "</ul>" : "Item details unavailable") + "</td><td>" + escapeHtml(money(sale.total_amount)) + "</td><td>" + escapeHtml(money(sale.amount_paid)) + "</td><td>" + escapeHtml(money(sale.balance)) + "</td></tr>";
+        return "<tr><td>" + escapeHtml(formatNigeriaDateTime(sale.created_at)) + "<br><small>#" + sale.id + "</small></td><td>" + escapeHtml(customerName(sale.customer_id)) + "</td><td>" + escapeHtml(sale.payment_method) + "</td><td>" + (items ? "<ul>" + items + "</ul>" : "Item details unavailable") + "</td><td>" + escapeHtml(money(sale.total_amount)) + "</td><td>" + escapeHtml(money(sale.amount_paid)) + "</td><td>" + escapeHtml(money(sale.balance)) + "</td></tr>";
       }).join("");
       const categoryName = categories.find((category) => String(category.id) === categoryId)?.name || "All categories";
-      printWindow.document.write("<!doctype html><html><head><meta charset='utf-8'><title>" + escapeHtml(filename) + "</title><style>body{font:12px Arial;color:#222;margin:28px}h1{font-size:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:left;vertical-align:top}th{background:#eee}ul{margin:0;padding-left:16px}@media print{tr{break-inside:avoid}}</style></head><body><h1>RetailOS Transactions</h1><p>Dates: " + escapeHtml(startDate || "All dates") + " to " + escapeHtml(endDate || "Today") + " · Category: " + escapeHtml(categoryName) + " · Payment: " + escapeHtml(paymentMethod || "All methods") + "</p><p>Transactions: " + rowsToExport.length + " · Total sales: " + escapeHtml(money(totalSales)) + " · Paid: " + escapeHtml(money(totalPaid)) + " · Balance: " + escapeHtml(money(totalBalance)) + "</p><table><thead><tr><th>Date / Sale</th><th>Payment</th><th>Items</th><th>Total</th><th>Paid</th><th>Balance</th></tr></thead><tbody>" + (tableRows || "<tr><td colspan='6'>No transactions match these filters.</td></tr>") + "</tbody></table><script>window.addEventListener('load',()=>window.print());</script></body></html>");
+      printWindow.document.write("<!doctype html><html><head><meta charset='utf-8'><title>" + escapeHtml(filename) + "</title><style>body{font:12px Arial;color:#222;margin:28px}h1{font-size:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:left;vertical-align:top}th{background:#eee}ul{margin:0;padding-left:16px}@media print{tr{break-inside:avoid}}</style></head><body><h1>RetailOS Transactions</h1><p>Dates: " + escapeHtml(startDate || "All dates") + " to " + escapeHtml(endDate || "Today") + " · Category: " + escapeHtml(categoryName) + " · Payment: " + escapeHtml(paymentMethod || "All methods") + "</p><p>Transactions: " + rowsToExport.length + " · Total sales: " + escapeHtml(money(totalSales)) + " · Paid: " + escapeHtml(money(totalPaid)) + " · Balance: " + escapeHtml(money(totalBalance)) + "</p><table><thead><tr><th>Date / Sale</th><th>Customer</th><th>Payment</th><th>Items</th><th>Total</th><th>Paid</th><th>Balance</th></tr></thead><tbody>" + (tableRows || "<tr><td colspan='7'>No transactions match these filters.</td></tr>") + "</tbody></table><script>window.addEventListener('load',()=>window.print());</script></body></html>");
       printWindow.document.close(); printWindow.focus();
     } catch (cause) {
       printWindow?.close();
@@ -296,8 +323,8 @@ export default function TransactionsPage() {
     <DashboardShell title="Transactions">
       {error && <p role="alert" className="mb-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
 
-      <section className="rounded-2xl border border-white/10 bg-[#151515] p-5">
-        <div data-tour="transactions-filters" className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <section data-tour="transactions-search-panel" className="rounded-2xl border border-white/10 bg-[#151515] p-4 sm:p-5">
+        <div data-tour="transactions-filters" className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <input
             aria-label="Search transactions"
             value={query}
@@ -339,7 +366,7 @@ export default function TransactionsPage() {
             type="button"
             onClick={clearFilters}
             disabled={activeFilters.length === 0}
-            className="rounded-lg border border-white/15 px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+            className="min-w-[112px] rounded-lg border border-white/15 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40"
           >
             Clear Filters
           </button>
@@ -367,27 +394,27 @@ export default function TransactionsPage() {
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => void exportTransactions("pdf")} disabled={exporting !== null || loading} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-black disabled:opacity-50">
+          <button type="button" onClick={() => void exportTransactions("pdf")} disabled={exporting !== null || loading || visibleRows.length === 0} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-black disabled:opacity-50">
             {exporting === "pdf" ? "Preparing PDF…" : "Export PDF"}
           </button>
-          <button type="button" onClick={() => void exportTransactions("csv")} disabled={exporting !== null || loading} className="rounded-lg border border-white/15 px-4 py-2 text-sm disabled:opacity-50">
+          <button type="button" onClick={() => void exportTransactions("csv")} disabled={exporting !== null || loading || visibleRows.length === 0} className="rounded-lg border border-white/15 px-4 py-2 text-sm disabled:opacity-50">
             {exporting === "csv" ? "Preparing CSV…" : "Export CSV"}
           </button>
           {exporting && <span role="status" className="text-xs text-white/50">Loading all matching transactions…</span>}
         </div>
 
         <div data-tour="transactions-table" className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="min-w-[760px] w-full text-left text-sm">
             <thead className="text-xs text-white/40">
               <tr>
-                {["DATE", "SALE", "TOTAL", "PAYMENT", "PAID", "BALANCE", "DETAILS"].map((heading) =>
+                {["DATE", "SALE", "CUSTOMER", "TOTAL", "PAYMENT", "PAID", "BALANCE", "DETAILS"].map((heading) =>
                   <th key={heading} className="px-3 py-3">{heading}</th>,
                 )}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="px-3 py-10 text-center text-white/40">Loading transactions…</td></tr>
+                <tr><td colSpan={8} className="px-3 py-10 text-center text-white/40">Loading transactions…</td></tr>
               ) : paginatedRows.map((sale) => (
                 <tr key={sale.id} className="border-t border-white/5">
                   <td className="px-3 py-4">{formatNigeriaDateTime(sale.created_at)}</td>
@@ -395,6 +422,7 @@ export default function TransactionsPage() {
                     <strong>#{sale.id}</strong>
                     {sale.client_transaction_id && <p className="mt-1 text-xs text-white/40">{sale.client_transaction_id}</p>}
                   </td>
+                  <td className="px-3 py-4">{customerName(sale.customer_id)}</td>
                   <td className="px-3 py-4">{money(sale.total_amount)}</td>
                   <td className="px-3 py-4">{sale.payment_method}</td>
                   <td className="px-3 py-4">{money(sale.amount_paid)}</td>
@@ -478,7 +506,7 @@ export default function TransactionsPage() {
           <p className="mt-1 text-sm text-white/50">Original transaction: {selectedSale.client_transaction_id || ("Sale #" + selectedSale.id)} · {formatNigeriaDateTime(selectedSale.created_at)} · {selectedSale.payment_method}</p>
           <div className="mt-3 rounded-lg bg-black/20 p-3 text-sm"><p>Original sale total: {money(selectedReceipt.total_amount)}</p><p>Amount paid: {money(selectedReceipt.amount_paid)}</p><p>Outstanding balance: {money(selectedReceipt.balance)}</p><p>Previously refunded: {money(selectedSale.refunded_amount || 0)}</p><p className="font-semibold">Remaining refundable: {money(remainingRefundable)}</p></div>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <label className="flex flex-col gap-1 text-sm text-white/60">Refund amount (₦)<input aria-label="Refund amount" type="number" min="0.01" max={remainingRefundable} step="0.01" value={refundAmount} onChange={(event) => setRefundAmount(event.target.value)} className="field" disabled={refundSubmitting} /></label>
+            <label className="flex flex-col gap-1 text-sm text-white/60">Refund amount (₦)<input aria-label="Refund amount" type="number" inputMode="decimal" min="0.01" max={remainingRefundable} step="0.01" value={refundAmount} onChange={(event) => setRefundAmount(event.target.value)} className="field" disabled={refundSubmitting} /></label>
             <label className="flex flex-col gap-1 text-sm text-white/60">Refund payment method<select aria-label="Refund payment method" value={refundPaymentMethod} onChange={(event) => setRefundPaymentMethod(event.target.value as "Cash" | "Transfer" | "POS")} className="field" disabled={refundSubmitting}><option value="Cash">Cash</option><option value="Transfer">Transfer</option><option value="POS">POS</option></select></label>
             <label className="flex flex-col gap-1 text-sm text-white/60 md:col-span-2">Reason for refund<textarea aria-label="Reason for refund" value={refundReason} maxLength={500} onChange={(event) => setRefundReason(event.target.value)} className="field min-h-24" placeholder="Explain why this refund is being issued" disabled={refundSubmitting} /></label>
           </div>

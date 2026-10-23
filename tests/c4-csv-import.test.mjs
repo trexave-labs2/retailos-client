@@ -4,27 +4,34 @@ import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../components/inventory/CsvImport.tsx", import.meta.url), "utf8");
 
-test("CSV template includes product and service examples with an item type column", () => {
-  assert.match(source, /Item type,Product name,Selling price,Opening stock/);
-  assert.match(source, /Product,Bottled Water 75cl/);
-  assert.match(source, /Service,Home delivery/);
+test("CSV template uses the server's supported column names and product/service examples", () => {
+  assert.match(source, /name,price,product_type,category_id,base_unit,opening_stock,low_stock_threshold,sku,barcode,cost_price/);
+  assert.match(source, /Bottled Water 75cl,350,Physical/);
+  assert.match(source, /Home delivery,1500,Service/);
   assert.match(source, /retailos-item-import-template\.csv/);
 });
 
-test("CSV import accepts service aliases and does not require service stock", () => {
-  assert.match(source, /"item type": "productType"/);
-  assert.match(source, /"product type": "productType"/);
-  assert.match(source, /\["service", "services"\]/);
-  assert.match(source, /productType === "Physical" && \(!Number\.isInteger\(stockNumber\)/);
-  assert.match(source, /Services do not track stock/);
-  assert.match(source, /row\.productType === "Physical" \? \{ opening_stock: row\.stock, low_stock_threshold: 0 \} : \{\}/);
+test("CSV upload sends the original file and store ID to the server import endpoint", () => {
+  assert.match(source, /form\.append\("store_id", String\(storeId\)\)/);
+  assert.match(source, /form\.append\("file", file\)/);
+  assert.match(source, /api<ImportResult>\("\/product\/import"/);
+  assert.match(source, /body: form/);
+  assert.doesNotMatch(source, /api\("\/product\/create"/);
 });
 
-test("CSV import surfaces structured server validation errors and result counts", () => {
-  assert.match(source, /cause instanceof ApiError/);
-  assert.match(source, /cause\.fields/);
-  assert.match(source, /cause\.code/);
-  assert.match(source, /row\.rowNumber \+ " \(" \+ row\.name \+ "\): " \+ serverErrorMessage\(e\)/);
-  assert.match(source, /item\(s\) imported: " \+ importedProducts \+ " product\(s\), " \+ importedServices \+ " service\(s\)/);
-  assert.match(source, /row\(s\) rejected or failed by the server/);
+test("CSV import feedback uses server created/failed counts and row-level errors", () => {
+  assert.match(source, /created_count: number/);
+  assert.match(source, /failed_count: number/);
+  assert.match(source, /result\.created_count/);
+  assert.match(source, /result\.failed_count/);
+  assert.match(source, /Rows rejected by the server/);
+  assert.match(source, /item\.row/);
+  assert.match(source, /item\.field/);
+  assert.match(source, /item\.message/);
+});
+
+test("CSV upload validates file type and size and warns about uncertain outcomes", () => {
+  assert.match(source, /endsWith\("\.csv"\)/);
+  assert.match(source, /2 \* 1024 \* 1024/);
+  assert.match(source, /refresh inventory before retrying/);
 });
