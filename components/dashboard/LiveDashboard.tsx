@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import DashboardShell from "@/components/layout/DashboardShell";
+import TransactionTrendsChart from "@/components/dashboard/TransactionTrendsChart";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
 import type { DailyBrief, DashboardRankings, DashboardStats, SaleSummary } from "@/lib/types";
@@ -15,6 +16,7 @@ export default function LiveDashboard() {
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [brief, setBrief] = useState<DailyBrief | null>(null);
+  const [briefError, setBriefError] = useState<string | null>(null);
   const [sales, setSales] = useState<SaleSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,16 +36,28 @@ export default function LiveDashboard() {
         if (!storeId) throw new Error("No store is associated with this account.");
 
         const query = "?store_id=" + encodeURIComponent(String(storeId));
-        const [dashboard, dailyBrief, recentSales] = await Promise.all([
+        // The daily brief is supplementary dashboard content. A brief API failure
+        // must not take down the entire dashboard.
+        const [dashboardResult, briefResult, salesResult] = await Promise.allSettled([
           api<DashboardStats>("/dashboard" + query),
           api<DailyBrief>("/dashboard/daily-brief" + query),
           api<{ sales: SaleSummary[] }>("/sales" + query),
         ]);
 
         if (cancelled) return;
-        setStats(dashboard);
-        setBrief(dailyBrief);
-        setSales(recentSales.sales ?? []);
+        if (dashboardResult.status === "rejected") throw dashboardResult.reason;
+
+        setStats(dashboardResult.value);
+        if (briefResult.status === "fulfilled") {
+          setBrief(briefResult.value);
+          setBriefError(null);
+        } else {
+          setBrief(null);
+          setBriefError(briefResult.reason instanceof Error
+            ? briefResult.reason.message
+            : "Unable to load the daily business brief.");
+        }
+        setSales(salesResult.status === "fulfilled" ? (salesResult.value.sales ?? []) : []);
         setError(null);
       } catch (err: unknown) {
         if (cancelled) return;
@@ -66,9 +80,15 @@ export default function LiveDashboard() {
       try {
         const params = new URLSearchParams({ store_id: String(storeId) });
         const latest = await api<DailyBrief>(`/dashboard/daily-brief?${params.toString()}`, { refresh: true });
-        if (!cancelled) setBrief(latest);
-      } catch {
-        // Keep the last successful brief visible if a background refresh fails.
+        if (!cancelled) {
+          setBrief(latest);
+          setBriefError(null);
+        }
+      } catch (err: unknown) {
+        // Preserve the last good brief during a background refresh failure.
+        if (!cancelled) {
+          setBriefError(err instanceof Error ? err.message : "Unable to refresh the daily business brief.");
+        }
       }
     }
 
@@ -152,7 +172,7 @@ export default function LiveDashboard() {
       ) : !stats ? (
         <p className="text-sm text-white/60">Dashboard data is unavailable.</p>
       ) : (
-        <DashboardContent user={user?.username} stats={stats} brief={brief} sales={sales} rankings={rankings} rankingsLoading={rankingsLoading} rankingsError={rankingsError} periodStart={periodStart} periodEnd={periodEnd} onPeriodStartChange={setPeriodStart} onPeriodEndChange={setPeriodEnd} onRetryRankings={() => setRankingsRetryCount((count) => count + 1)} />
+        <DashboardContent user={user?.username} stats={stats} brief={brief} briefError={briefError} onRetryBrief={() => setRetryCount((count) => count + 1)} sales={sales} rankings={rankings} rankingsLoading={rankingsLoading} rankingsError={rankingsError} periodStart={periodStart} periodEnd={periodEnd} onPeriodStartChange={setPeriodStart} onPeriodEndChange={setPeriodEnd} onRetryRankings={() => setRankingsRetryCount((count) => count + 1)} />
       )}
     </DashboardShell>
   );
@@ -162,6 +182,8 @@ function DashboardContent({
   user,
   stats,
   brief,
+  briefError,
+  onRetryBrief,
   sales,
   rankings,
   rankingsLoading,
@@ -175,6 +197,8 @@ function DashboardContent({
   user?: string;
   stats: DashboardStats;
   brief: DailyBrief | null;
+  briefError: string | null;
+  onRetryBrief: () => void;
   sales: SaleSummary[];
   rankings: DashboardRankings | null;
   rankingsLoading: boolean;
@@ -214,49 +238,106 @@ function DashboardContent({
         </div>
       </section>
 
-      <section aria-labelledby="daily-brief" data-tour="dashboard-brief" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
-        <h2 id="daily-brief" className="font-semibold">Daily Business Brief</h2>
-        {brief ? (
-          <div className="mt-3 space-y-4 text-sm">
-            <div>
-              <h3 className="font-medium">Sales performance</h3>
-              <p>Today: ₦{Number(brief.sales.today_total).toLocaleString("en-NG")}</p>
-              <p>Yesterday: ₦{Number(brief.sales.yesterday_total).toLocaleString("en-NG")}</p>
-              <p>Status: {brief.sales.status}{brief.sales.change_percent != null ? ` (${brief.sales.change_percent}%)` : " (no previous-day comparison available)"}</p>
-            </div>
-            <div>
-              <h3 className="font-medium">Alerts requiring attention</h3>
-              {brief.alerts.length ? <ul className="list-disc pl-5">{brief.alerts.map((alert) => <li key={alert.id}>{alert.message}</li>)}</ul> : <p>No open alerts.</p>}
-            </div>
-            <div>
-              <h3 className="font-medium">Restock recommendations</h3>
-              <p className="mb-2 text-xs text-white/45">Physical products only. Quantities and reorder thresholds use each product&apos;s configured base unit.</p>
-              {restockRecommendations.length ? (
-                <ul className="space-y-2">
-                  {restockRecommendations.map((item) => (
-                    <li key={item.product_id} className="rounded-lg bg-white/[0.03] p-3">
-                      <p className="font-medium">{item.product_name}</p>
-                      <p className="mt-1 text-xs text-white/60">
-                        {item.stock_quantity} in stock · Reorder threshold: {item.low_stock_threshold}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              ) : <p className="rounded-lg bg-white/[0.03] p-3 text-sm text-white/60">No physical products currently meet a valid reorder threshold.</p>}
-            </div>
-            <div>
-              <h3 className="font-medium">Top-selling product</h3>
-              {brief.insights.high_performer ? <p>{brief.insights.high_performer.product_name} ({brief.insights.high_performer.units_sold} units sold)</p> : <p>No sales recorded today yet.</p>}
-            </div>
-            {brief.insights.declining_product && (
-              <div>
-                <h3 className="font-medium">Sales to watch</h3>
-                <p>{brief.insights.declining_product.product_name}: {brief.insights.declining_product.yesterday_units_sold} units yesterday and {brief.insights.declining_product.today_units_sold} today.</p>
-              </div>
-            )}
+      <section aria-labelledby="daily-brief" data-tour="dashboard-brief" className="mt-5 min-w-0 rounded-2xl border border-white/10 bg-[#151515] p-4 sm:p-5">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 id="daily-brief" className="font-semibold">Daily Business Brief</h2>
+            <p className="mt-1 text-xs text-white/45">A quick view of today&apos;s performance and actions needing attention.</p>
           </div>
-        ) : <p className="mt-3 text-sm text-white/50">Today&apos;s business brief is not available.</p>}
+          {brief?.date ? <p className="text-xs text-white/45">{formatNigeriaDate(brief.date + "T12:00:00+01:00")}</p> : null}
+        </div>
+
+        {brief ? (
+          <div className="mt-4 min-w-0 space-y-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="min-w-0 rounded-xl border border-white/5 bg-white/[0.03] p-4">
+                <p className="text-xs text-white/55">Today&apos;s sales</p>
+                <p className="mt-2 break-words text-xl font-semibold tabular-nums">₦{Number(brief.sales.today_total).toLocaleString("en-NG")}</p>
+                <p className="mt-1 text-xs text-white/45">Current reporting day</p>
+              </div>
+              <div className="min-w-0 rounded-xl border border-white/5 bg-white/[0.03] p-4">
+                <p className="text-xs text-white/55">Yesterday&apos;s sales</p>
+                <p className="mt-2 break-words text-xl font-semibold tabular-nums">₦{Number(brief.sales.yesterday_total).toLocaleString("en-NG")}</p>
+                <p className="mt-1 text-xs text-white/45">Previous reporting day</p>
+              </div>
+              <div className="min-w-0 rounded-xl border border-white/5 bg-white/[0.03] p-4">
+                <p className="text-xs text-white/55">Daily change</p>
+                <p className="mt-2 text-xl font-semibold">{brief.sales.change_percent != null ? `${brief.sales.change_percent}%` : "N/A"}</p>
+                <p className="mt-1 text-xs text-white/45">
+                  {brief.sales.change_percent == null
+                    ? "No previous-day comparison available"
+                    : brief.sales.status === "UP" ? "Sales increased" : brief.sales.status === "DOWN" ? "Sales decreased" : "Sales remained steady"}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+              <div className="min-w-0 rounded-xl border border-white/5 bg-black/20 p-4">
+                <h3 className="font-medium">Alerts requiring attention</h3>
+                {brief.alerts.length ? (
+                  <ul className="mt-3 space-y-2">
+                    {brief.alerts.map((alert) => (
+                      <li key={alert.id} className="break-words rounded-lg border border-amber-400/10 bg-amber-400/[0.04] p-3 text-sm">
+                        {alert.message}
+                      </li>
+                    ))}
+                  </ul>
+                ) : <p className="mt-3 text-sm text-white/55">No open alerts.</p>}
+              </div>
+
+              <div className="min-w-0 rounded-xl border border-white/5 bg-black/20 p-4">
+                <h3 className="font-medium">Restock recommendations</h3>
+                <p className="mt-1 text-xs leading-5 text-white/45">Physical products only. Quantities use each product&apos;s configured base unit.</p>
+                {restockRecommendations.length ? (
+                  <ul className="mt-3 space-y-2">
+                    {restockRecommendations.map((item) => (
+                      <li key={item.product_id} className="min-w-0 rounded-lg bg-white/[0.03] p-3">
+                        <p className="break-words font-medium">{item.product_name}</p>
+                        <p className="mt-1 text-xs text-white/60">
+                          {item.stock_quantity} in stock · Reorder threshold: {item.low_stock_threshold}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : <p className="mt-3 rounded-lg bg-white/[0.03] p-3 text-sm text-white/55">No physical products currently meet a valid reorder threshold.</p>}
+              </div>
+
+              <div className="min-w-0 rounded-xl border border-white/5 bg-black/20 p-4">
+                <h3 className="font-medium">Top-selling product</h3>
+                {brief.insights.high_performer ? (
+                  <div className="mt-3 rounded-lg bg-white/[0.03] p-3">
+                    <p className="break-words font-medium">{brief.insights.high_performer.product_name}</p>
+                    <p className="mt-1 text-sm text-white/55">{brief.insights.high_performer.units_sold} units sold today</p>
+                  </div>
+                ) : <p className="mt-3 text-sm text-white/55">No sales recorded today yet.</p>}
+              </div>
+
+              {brief.insights.declining_product ? (
+                <div className="min-w-0 rounded-xl border border-white/5 bg-black/20 p-4">
+                  <h3 className="font-medium">Sales to watch</h3>
+                  <p className="mt-3 break-words text-sm">
+                    <span className="font-medium">{brief.insights.declining_product.product_name}</span>
+                    <span className="text-white/55"> recorded </span>
+                    {brief.insights.declining_product.yesterday_units_sold} units yesterday and {brief.insights.declining_product.today_units_sold} today.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : briefError ? (
+          <div role="alert" className="mt-4 rounded-xl border border-red-500/20 bg-red-500/5 p-4">
+            <p className="text-sm text-red-200">The daily business brief could not be loaded.</p>
+            <p className="mt-1 break-words text-xs text-red-200/70">{briefError}</p>
+            <button type="button" onClick={onRetryBrief} className="mt-3 rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-black">Retry brief</button>
+          </div>
+        ) : (
+          <div role="status" aria-live="polite" className="mt-4 rounded-xl bg-white/[0.03] p-4 text-sm text-white/55">
+            The daily business brief is not available yet.
+          </div>
+        )}
       </section>
+
+      <TransactionTrendsChart />
 
       <DashboardRankingsSection
         rankings={rankings}

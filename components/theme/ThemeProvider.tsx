@@ -79,7 +79,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
       aria-label={`Switch to ${nextTheme} theme`}
       aria-pressed={theme === "light"}
       title={`Switch to ${nextTheme} theme`}
-      className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm font-medium transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 ${compact ? "min-w-10" : ""}`}
+      className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm font-medium transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 ${compact ? "min-w-10 header-theme-toggle" : ""}`}
     >
       <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
       <span>{compact ? (theme === "dark" ? "Light" : "Dark") : `${theme === "dark" ? "Light" : "Dark"} theme`}</span>
