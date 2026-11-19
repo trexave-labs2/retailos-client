@@ -19,7 +19,7 @@ retailos-server (Flask)
 PostgreSQL
 ```
 
-The client no longer owns authentication, database access, inventory logic, sales transactions, reports, or server-side API routes. The Flask server is the source of truth.\n\nClient authentication remains on `POST /auth/login`, `GET /auth/me`, and `POST /auth/logout`, using the Client session cookie and the retail account password. Platform administrators sign in through the separate `/admin/auth/*` routes and an independent Admin credential/session. The Client login must never authenticate against the Admin password.
+The client no longer owns authentication, database access, inventory logic, sales transactions, reports, or server-side API routes. The Flask server is the source of truth.\n\nClient authentication remains on `POST /auth/login`, `GET /auth/me`, and `POST /auth/logout`, using the Client session cookie and the retail account password. Platform administrators sign in through the separate `/admin/auth/*` routes and an independent Admin credential/session. The Client login must never authenticate against the Admin password. Admin sign-in uses a separate HttpOnly cookie, so an Admin login does not replace or clear the Client session.
 
 ## Run locally
 
